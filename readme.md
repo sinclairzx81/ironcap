@@ -11,9 +11,12 @@ export class Bar { }
 @ironcap.component() 
 export class Baz { }
 
-@ironcap.component() export class Foo {
-  constructor( @ironcap.bind("Bar") private bar: Bar,
-               @ironcap.bind("Baz") private baz: Baz) {
+@ironcap.component() 
+export class Foo {
+  constructor( 
+    @ironcap.bind("Bar") private bar: Bar,
+    @ironcap.bind("Baz") private baz: Baz
+  ) {
   }
 }
 
@@ -43,7 +46,7 @@ Consider the following class / component
 ```
 #### single scope
 note that the constructor is only called once per scope.
-```
+```typescript
 const scope = ironcap.scope()
 const foo_0 = scope.resolve("Foo")
 const foo_1 = scope.resolve("Foo")
@@ -56,7 +59,7 @@ const foo_4 = scope.resolve("Foo")
 ```
 #### multiple scopes
 new instances can be created by creating new scopes.
-```
+```typescript
 const foo_0 = ironcap.scope().resolve("Foo")
 const foo_1 = ironcap.scope().resolve("Foo")
 const foo_2 = ironcap.scope().resolve("Foo")
@@ -70,6 +73,7 @@ const foo_4 = ironcap.scope().resolve("Foo")
 // constructor called
 // constructor called
 ```
+
 ### late bound components
 ironcap supports late binding dependencies on scopes which allows a scope to be augmented with additional components via the scopes ```define()``` function. This is useful for unresolvable objects that are loaded in after the fact, (such as data read in from configuration files).
 

@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 
-ironcap - An inversion of control library for TypeScript leveraging the ES7 decorator syntax.
+ironcap - An inversion of control library for TypeScript
 
 The MIT License (MIT)
 

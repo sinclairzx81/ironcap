@@ -6,7 +6,8 @@ export class Bar { }
 @ironcap.component() 
 export class Baz { }
 
-@ironcap.component() export class Foo {
+@ironcap.component() 
+export class Foo {
   constructor(@ironcap.bind("Bar") private bar: Bar,
               @ironcap.bind("Baz") private baz: Baz) {
   }
