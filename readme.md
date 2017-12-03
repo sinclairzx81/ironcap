@@ -33,7 +33,7 @@ ironcap is an experimental inversion of control library for TypeScript. It lever
 
 ### scopes
 
-Ironcap ties much of its functionality to a concept called a scope.
+ironcap ties much of its functionality to a concept called a scope.
 
 A scope can be thought of as a container or template for all registered ```components```. Callers use scopes to ```resolve()``` actual component instances; and the scope will internally cache the instance for subsequent calls to ```resolve()```. This is conceptually inline with ```singleton``` and ```transient``` initialization seen in other IoC libraries, but with transient resolution tied to different scopes.
 
