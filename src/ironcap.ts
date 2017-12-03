@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------------------
 
-ironcap - An inversion of control library for TypeScript
+ironcap - A dependency injection library for TypeScript
 
 The MIT License (MIT)
 

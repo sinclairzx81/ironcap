@@ -1,6 +1,6 @@
 # ironcap
 
-An experimental inversion of control library for TypeScript leveraging the ES7 decorator syntax.
+An experimental dependency injection library for TypeScript leveraging the ES7 decorator syntax.
 
 ```typescript
 import * as ironcap from "<path-to>/ironcap"
@@ -29,7 +29,7 @@ const foo_1 = ironcap.scope().resolve<Foo>("Foo")
 
 ### overview
 
-ironcap is an experimental inversion of control library for TypeScript. It leverages TypeScript's experimental decorator syntax to declaratively wire dependencies for classes marked as ```components```.
+ironcap is an experimental dependency injection library for TypeScript. It leverages TypeScript's experimental decorator syntax to declaratively wire dependencies for classes marked as ```components```.
 
 ### scopes
 
