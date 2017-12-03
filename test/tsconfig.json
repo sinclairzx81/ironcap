@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module"        : "amd",
+    "outFile"       : "../test.js",
+    "removeComments": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "lib"           : ["es6","dom"]
+  }, "files"        : [
+    "index.ts"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "name": "project-name",
+  "version": "1.0.0",
+  "description": "project-name",
+  "test": "node test",
+  "scripts": {
+    "clean": "node tasks clean",
+    "start": "node tasks start",
+    "build": "node tasks build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sinclairzx81/project-name"
+  },
+  "author": "sinclairzx81",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^8.0.7",
+    "@types/reflect-metadata": "0.0.5",
+    "fsrun": "^0.9.4",
+    "shx": "^0.2.2",
+    "typescript": "^2.4.2",
+    "typescript-bundle": "^0.8.6"
+  },
+  "dependencies": {
+    "reflect-metadata": "^0.1.10"
+  }
+}
