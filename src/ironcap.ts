@@ -263,3 +263,37 @@ class Scope<TEnvironment> {
     return registration.instance
   }
 }
+
+// --------------------------------------------------------------------
+// Start
+// --------------------------------------------------------------------
+
+export type StartOptions = {[component: string]: {
+  bindings?: {[binding: string]: string},
+  options?:  {[option: string]: any}
+}}
+
+/**
+ * creates instances through configuration.
+ * @param {StartOptions} options the boot configuration.
+ * @returns {any[]}
+ */
+export function start (options: StartOptions): any[] {
+  return Object.keys(options).map(instance_name => {
+    const instance        = options[instance_name]
+    const instance_scope  = scope()
+    if(instance.options) {
+      Object.keys(instance.options).forEach(option_name => {
+        instance_scope.define(option_name, [], () => 
+          instance.options[option_name])
+      })
+    }
+    if(instance.bindings) {
+      Object.keys(instance.bindings).forEach(binding_name => {
+        instance_scope.define(binding_name, [], () => 
+          instance_scope.resolve(instance.bindings[binding_name]))
+      })
+    }
+    return instance_scope.resolve(instance_name)
+  })
+}
