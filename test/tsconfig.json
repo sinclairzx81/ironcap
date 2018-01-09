@@ -1,13 +1,17 @@
 {
   "compilerOptions": {
     "target": "es2017",
-    "module"        : "amd",
-    "outFile"       : "../test.js",
+    "module":  "amd",
+    "outFile": "../test.js",
     "removeComments": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "lib"           : ["es6","dom"]
-  }, "files"        : [
+    "lib": ["es6","dom"],
+    "baseUrl": ".", 
+    "paths": {
+      "@ironcap/*": ["../src/*"]
+    }
+  }, "files" : [
     "index.ts"
   ]
 }
