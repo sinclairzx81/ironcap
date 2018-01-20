@@ -1,11 +1,11 @@
-import { component, bind, assert } from "../../src/ironcap"
+import { type, bind, assert } from "../../src/ironcap"
 import { IDatabase }               from "../database/index"
 
 export interface HomeControllerOptions {
   name: string
 }
 
-@component()
+@type()
 export class HomeController {
   constructor(@bind("HomeControllerOptions") private options: HomeControllerOptions,
               @bind("IDatabase") private database: any) {

@@ -1,209 +1,208 @@
 # ironcap
 
-An experimental dependency injection library for TypeScript leveraging the ES7 decorator syntax.
+An inversion of control library for TypeScript leveraging the ES7 decorators.
 
 ```typescript
 import * as ironcap from "<path-to>/ironcap"
 
-@ironcap.component() 
+@ironcap.type() 
 export class Bar { }
 
-@ironcap.component() 
+@ironcap.type() 
 export class Baz { }
 
-@ironcap.component() 
+@ironcap.type()
 export class Foo {
-  constructor( 
-    @ironcap.bind("Bar") private bar: Bar,
-    @ironcap.bind("Baz") private baz: Baz
-  ) {
+  constructor(@ironcap.bind("Bar") private bar: Bar,
+              @ironcap.bind("Baz") private baz: Baz) {
   }
 }
 
 // explicit
 const foo_0 = new Foo(new Bar(), new Baz())
 
-// declarative through binding
-const foo_1 = ironcap.scope().resolve<Foo>("Foo")
+// implicit
+const foo_1 = ironcap.resolve("Foo")
 ```
 
 ### overview
 
-ironcap is an experimental dependency injection library for TypeScript. It leverages TypeScript's experimental decorator syntax to declaratively wire dependencies for classes marked as ```components```.
+ironcap is small inversion of control library TypeScript which leverages ES7 decorator syntax for registering types for instance resolution. ironcap allows one declaritively define which types can be resolved through decorators. 
+
+### registering types | resolving instances
+
+ironcap supports two means of registering types. The ```@type()``` decorator which is applied to classes, and a more typical ```define()``` function. The following demonstrates both.
+
+#### decorator
+
+The following registers a type via decorator.
+
+note: callers may override the automatic typename ```Foo``` with ```@ironcap.type("OtherName")```.
+
+```typescript
+import * as ironcap from "..."
+
+@ironcap.type()
+class Foo {
+
+}
+
+const foo = ironcap.resolve("Foo")
+```
+
+#### define
+
+The following registers a type via define.
+
+note: the ```define()``` function is primarily used to late register types dynamically.
+
+```typescript
+import * as ironcap from "..."
+
+class Foo {
+}
+
+@ironcap.define("Foo", scope => new Foo())
+
+const foo = ironcap.resolve("Foo")
+```
+
+### binding
+
+ironcap will automatically inject constructor arguments which have been decorated with a ```@ironcap.bind(...)```. The following example will automatically inject ```Bar``` on ```Foo```.
+
+```typescript
+
+@ironcap.type()
+class Bar {}
+
+@ironcap.type()
+class Foo {
+  constructor(@ironcap.bind("Bar") private bar: Bar) {
+
+  }
+}
+
+console.log(ironcap.resolve("Foo"))
+
+// outputs:
+// Foo { bar: Bar {} }
+```
 
 ### scopes
 
-ironcap ties much of its functionality to a concept called a scope.
+Scopes are core concept in ironcap. In the preceeding examples, the type ```Foo``` was registered on a default root scope.
 
-A scope can be thought of as a container or template for all registered ```components```. Callers use scopes to ```resolve()``` actual component instances; and the scope will internally cache the instance for subsequent calls to ```resolve()```. This is conceptually inline with ```singleton``` and ```transient``` initialization seen in other IoC libraries, but with transient resolution tied to different scopes.
-
-Consider the following class / component
+Scopes can be thought of as a space where types (classes) can be registered and instances of that type can be resolved from. All instances on a scope are created once, meaning if a scope resolves a new instance of a type, subsequent calls to resolve that type will returned that first instance. Scopes provide singleton like
+initialization (as seen in other IoC libraries).
 
 ```typescript
-@ironcap.component() class Foo { 
+@ironcap.type() 
+class Foo { 
   constructor() { 
-    console.log('constructor called' )
+    console.log('Foo constructor called')
   }
 }
-```
-#### single scope
-note that the constructor is only called once per scope.
-```typescript
-const scope = ironcap.scope()
-const foo_0 = scope.resolve("Foo")
-const foo_1 = scope.resolve("Foo")
-const foo_2 = scope.resolve("Foo")
-const foo_3 = scope.resolve("Foo")
-const foo_4 = scope.resolve("Foo")
-
+ironcap.resolve("Foo")
+ironcap.resolve("Foo")
+ironcap.resolve("Foo")
+ironcap.resolve("Foo")
 // outputs: 
-// constructor called
+// Foo constructor called
 ```
-#### multiple scopes
-new instances can be created by creating new scopes.
-```typescript
-const foo_0 = ironcap.scope().resolve("Foo")
-const foo_1 = ironcap.scope().resolve("Foo")
-const foo_2 = ironcap.scope().resolve("Foo")
-const foo_3 = ironcap.scope().resolve("Foo")
-const foo_4 = ironcap.scope().resolve("Foo")
 
+Contrast this with the following code, where a new scope is created with the ```.scope()``` function, followed by resolving the type ```Foo```.
+
+```typescript
+@ironcap.type() 
+class Foo { 
+  constructor() { 
+    console.log('Foo constructor called')
+  }
+}
+ironcap.scope().resolve("Foo")
+ironcap.scope().resolve("Foo")
+ironcap.scope().resolve("Foo")
+ironcap.scope().resolve("Foo")
 // outputs: 
-// constructor called
-// constructor called
-// constructor called
-// constructor called
-// constructor called
+// Foo constructor called
+// Foo constructor called
+// Foo constructor called
+// Foo constructor called
 ```
 
-### late bound components
-ironcap supports late binding dependencies on scopes which allows a scope to be augmented with additional components via the scopes ```define()``` function. This is useful for unresolvable objects that are loaded in after the fact, (such as data read in from configuration files).
+### late binding
+class decoupling is a good model for developing flexible software and good use of interfacing to define contracts between interacting components 
+is a sound pattern. Consider the following example. Here we have two possible repository types ```MongoRepository``` and ```SqlRepository``` 
+which implements ```IRepository```. Next, we have a type ```Server``` that expects an instance of ```IRepository```.
 
-note: ironcap will throw a ```component not found``` error if attempting to resolve to things it cannot find. 
+In scenarios below, the selection of which repository to use is typically a configuration concern. Below we define the type
+```IRepository``` to be of type ```MongoRepository``` via a call to ```define()```. 
 
 ```typescript
-@ironcap.component() class Foo {
-  // note: 'Foo' wants to bind on 'Options'
-  constructor(@ironcap.bind("Options") private options: any) {
-    console.log(options.config)
+// repository types
+interface IRepository {}
+@ironcap.type() class MongoRepository implements IRepository { }
+@ironcap.type() class SqlRepository   implements IRepository { }
+
+// server
+@ironcap.type() class Server {
+  constructor(@ironcap.bind("IRepository") private repository: IRepository) {
   }
 }
 
-...
+// configuration
+ironcap.define("IRepository", scope => scope.resolve("MongoRepository"))
 
-// create the scope
-const scope = ironcap.scope()
+console.log(ironcap.resolve("Server"))
 
-// define 'Options'
-scope.define("Options", () => {
-  return {
-    config: "<some-config-here>"
-  }
-})
-
-// resolve
-const foo = scope.resolve("Foo")
+// outputs:
+// Server { repository: MongoRepository {} }
 ```
 
-### late interface binding
-class decoupling is a good model for developing flexible software, and ironcap was built with this approach in mind. Consider the following where we have the interface ```IBar``` and implementations ```XBar``` and ```YBar```. Note that the component ```Foo``` is binding on the interface ```IBar```.
-
-The following code outlines how to preform binding ```IBar``` as ```XBar``` on the scope.
-
-```typescript
-interface IBar {}
-@ironcap.component() 
-class XBar implements IBar {
-
-}
-
-@ironcap.component() 
-class YBar implements IBar {
-
-}
-
-@ironcap.component() class Foo {
-  constructor(@ironcap.bind("IBar") private bar: IBar) {
-  }
-}
-
-...
-
-// create a scope
-const scope = ironcap.scope()
-
-// map 'IBar' as 'XBar'
-scope.define("IBar", () => scope.resolve("XBar"))
-
-// 'Foo' will resolve with instance 'XBar'
-const foo = scope.resolve("Foo")
-```
 ### assertions
-It is common to want to assert on a component prior to using it. When ironcap resolves on a component, it also passes through a assertion phase that the caller can hook into for asserting the object is what they expect. This is primary useful for configuration validation at startup.
+ironcap provides facilities for asserting instances. assertions are optional, but if specified, are run immediately after initializing the instance of a type. The following is the intended usecase.
 
 ```typescript
-const scope = ironcap.scope()
-scope.define("options", () => 1)
-scope.assert("options", instance => {
-  if(instance !== 1) throw Error("does not eq 1")
+
+ironcap.assert<MongoRepositoryOptions>("MongoRepositoryOptions", options => {
+  if ( options.host === undefined ) throw Error ("host expected")
+  if ( options.port === undefined ) throw Error ("port expected")
+  if ( options.user === undefined ) throw Error ("user expected")
+  if ( options.pass === undefined ) throw Error ("pass expected")
 })
-const options = scope.resolve("options")
-
-```
-### environments
-components are typically run on some host environment. ironcap provides the scope  ```bind()``` function to optionally bind a component to its host environment prior to ```resolve()```. This functionality can be useful if object initialization also involves attaching the object to some host (an example of which might include attaching a http component to its respective server)
-
-In the code below, we model the interface type ```IComponent``` as well as a concrete type ```Host``` which provides the method ```mount(component: IComponent)```.
-
-Next, we create an the concrete type ```Component``` which implements ```IComponent``` and register it as ironcap component via decoration.
-
-Lastly, we want to resolve a new ```Component``` with the expectation it will be already mounted on the environment. This is achieved via the scopes ```bind(...)``` function. Also note that when requesting a scope, we pass a new instance of ```Host``` which ironcap interprets as the binding environment.
-
-```typescript
-export interface IComponent { 
-
+interface MongoRepositoryOptions {
+  host: string
+  port: string
+  user: string
+  pass: string
 }
 
-export class Host { 
-  public mount (component: IComponent) {
-    console.log("mounting", component)
+@ironcap.type()
+class MongoRepository {
+  constructor(@ironcap.bind("MongoRepositoryOptions") private options: MongoRepositoryOptions) {
+
   }
 }
 
-...
+// configuration time
+ironcap.define("MongoRepositoryOptions", scope => {
+  return {
+    host: "localhost",
+    port: 1234,
+    user: "user",
+    pass: "pass"
+  }
+})
 
-@ironcap.component() 
-export class Component implements IComponent { }
+console.log(ironcap.resolve("MongoRepository"))
 
-...
-
-// create scope with the host.
-const scope = ironcap.scope(new Host())
-
-// configure scope to bind to the environment (Host)
-scope.bind<Component>("Component", (environment, component) => 
-
-  environment.mount(component))
-
-// component is bound to the environment !
-const component = scope.resolve("Component")
+// outputs:
+// MongoRepository {
+//  options: { host: 'localhost', port: 1234, user: 'user', pass: 'pass' } }
 ```
 
-### how to use
-
-clone this project and run ```npm start``` from the project root. To use in local projects, copy the ```./src/ironcap.ts``` file and configure the typescript compiler in the following way
-
-tsconfig.json
-```json
-"compilerOptions": {
-  "experimentalDecorators": true,
-  "emitDecoratorMetadata": true
-}
-```
-and install
-
-
-#### reflect-metadata
+### prereq
 ```
 npm install @types/reflect-metadata --save-dev
 npm install reflect-metadata --save

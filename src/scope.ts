@@ -1,10 +1,10 @@
 /*--------------------------------------------------------------------------
 
-ironcap - A dependency injection library for TypeScript
+ironcap - An inversion of control library for TypeScript
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Haydn Paterson (sinclair) <haydn.developer@gmail.com>
+Copyright (c) 2018 Haydn Paterson (sinclair) <haydn.developer@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,14 +26,15 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
+import "reflect-metadata"
 
-export type ScopeRegistration     = { component: string, dependencies: string[], factory: (dependencies: any[]) => any, instance: any }
-export type ScopeAssertion<TType> = { component: string, func: (instance: TType) => void }
+export type ScopeRegistration     = { typeName: string, factory: (local: Scope<any>, environment: any) => any, instance: any }
+export type ScopeAssertion<TType> = { typeName: string, func: (instance: TType) => void }
 
 /**
  * Scope
  * 
- * A isolation container for component instances.
+ * A resolution scope for types.
  */
 export class Scope<TEnvironment> {
   private registrations: ScopeRegistration    [] = []
@@ -47,108 +48,133 @@ export class Scope<TEnvironment> {
   constructor(private environment: TEnvironment) { }
 
   /**
-   * creates a new scope.
+   * creates a new scope from this scope.
    * @param {UEnvironment} environment the environment for this scope.
    * @returns {Scope<UEnvironment>}
    */
   public scope<UEnvironment>(environment: UEnvironment): Scope<UEnvironment> {
     const scope = new Scope<UEnvironment>(Object.assign(this.environment, environment))
     scope.assertions = this.assertions.map(assertion => ({
-       component: assertion.component,
-       func:      assertion.func 
+       typeName: assertion.typeName,
+       func:     assertion.func 
     }))
     scope.registrations = this.registrations.map(registration => ({
-      component:    registration.component, 
-      dependencies: registration.dependencies, 
-      factory:      registration.factory,
-      instance:     undefined
+      typeName:  registration.typeName,
+      factory:   registration.factory,
+      instance:  undefined
     }))
     return scope
   }
 
   /**
-   * defines a new component on this scope.
-   * @param {string} component the name of this component. 
-   * @param {() => TType} factory the component factory function.
+   * registers a new type available on this scope.
+   * @param {string} typeName the name of the type being registered. 
+   * @param {(Scope<TEnvironment>, TEnvironment) => TType} factory the type factory.
    * @returns {Scope<TEnvironment>}
    */
-  public define<TType>(component: string, factory: () => TType): Scope<TEnvironment>
-
-  /**
-   * defines a component on this Scope.
-   * @param {string} component the name of this component. 
-   * @param {string[]} dependencies the dependencies array
-   * @param {(...args: any[]) => TType} factory the component factory function.
-   * @returns {Scope}
-   */
-  public define<TType>(component: string, dependencies: string[], factory: (...args: any[]) => TType): Scope<TEnvironment>
-
-  /**
-   * defines a component on this Scope.
-   * @param {string} component the name of this component. 
-   * @param {string[]} dependencies the dependencies array
-   * @param {(...args: any[]) => TType} factory the component factory function.
-   * @returns {Scope<TEnvironment>}
-   */
-  public define(...args: any[]): Scope<TEnvironment> {
-    const component    = args[0] as string
-    const dependencies = (args.length === 3) ? args[1] : []
-    const factory      = (args.length === 3) ? args[2] : args[1]
-    const registration = this.registrations.find(registration  => registration.component === component)
-    if (registration !== undefined ) { throw Error(`Scope: component '${component}' already registered.`)}
-    this.registrations.push({ component, dependencies, factory, instance: undefined })
+  public  define<TType>(typeName: string, factory: (local: Scope<TEnvironment>, environment: TEnvironment) => TType): Scope<TEnvironment> {
+    const registration = this.registrations.find(registration  => registration.typeName === typeName)
+    if (registration !== undefined ) { throw Error(`Scope: component '${typeName}' already registered.`)}
+    this.registrations.push({ typeName, factory, instance: undefined })
     return this
   }
 
   /**
-   * creates assertion to the given component.
-   * @param {string} component the name of the component to assert.
-   * @param {(instance: TType) => void} func the assert function.
+   * creates a type assertion for the given type name.
+   * @param {string} typeName the name of the type to assert.
+   * @param {(instance: TType) => void} func the instance assertion function.
    * @returns {Scope<TEnvironment>}
    */
-  public assert<TType>(component: string, func: (instance: TType) => void): Scope<TEnvironment> {
-    this.assertions.push({ component, func })
+  public assert<TType>(typeName: string, func: (instance: TType) => void): Scope<TEnvironment> {
+    this.assertions.push({ typeName, func })
     return this
   }
 
   /**
-   * resolves a component. throws error if unable to resolve.
-   * @param {string} component the name of the component or definition resolve.
+   * resolves a type from this scope.
+   * @param {string} typeName the name of the type to resolve.
    * @returns {TType}
    */
-  public resolve<TType>(component: string): TType {
+  public resolve<TType>(typeName: string): TType {
     // load registration
-    const registration = this.registrations.find(registration => registration.component === component)
+    const registration = this.registrations.find(registration => registration.typeName === typeName)
     if (registration === undefined) { 
-      throw Error(`component '${component}' does not exist`) 
+      throw Error(`component '${typeName}' does not exist`) 
     }
 
-    // check if already initialized.
+    // if already resolved, return.
     if (registration.instance !== undefined) { 
-      return registration.instance 
+      return registration.instance
     }
 
-    // resolve dependencies.
-    const dependencies = registration.dependencies.map(dependency => {
-      const registration = this.registrations.find(registration => registration.component === dependency)
-      if (registration === undefined) { throw Error(`component '${dependency}' for '${component}' does not exist`) }
-      if (registration.instance === undefined) {
-        registration.instance = this.resolve(registration.component)
-      }
-      return registration.instance
-    })
+    // resolve the instance.
+    const instance = registration.factory(this, this.environment)
 
-    // create instance with dependencies.
-    const instance   = registration.factory(dependencies)
-    const assertions = this.assertions.filter(assertion => assertion.component === registration.component)
+    // check for assertions on the instance.
+    const assertions = this.assertions.filter(assertion => assertion.typeName === registration.typeName)
     assertions.forEach(assertion => { 
       try {
         assertion.func(instance)
       } catch (error) {
-        throw Error(`component '${assertion.component}' assertion ${error}`)
+        throw Error(`component '${assertion.typeName}' assertion ${error}`)
       }
     })
+
+    // assign instance
     registration.instance = instance
+
+    // return
     return registration.instance
+  }
+
+  // ------------------------------------------------
+  //
+  // decorators
+  //
+  // -------------------------------------------------
+
+  /**
+   * (decorator) registers a class as a resolvable type.
+   * @param {string} typeName (optional) override for the typeName.
+   * @returns {(ctor: any) => any}
+   */
+  public type (typeName?: string) {
+    return (ctor: any) => {
+      this.define(typeName || ctor.name, local => {
+        const constructor_arguments = (Reflect.getMetadata("ironcap::bindings", ctor) || []) as { 
+          binding: string, 
+          index:   number 
+        }[]
+        const sequenced = []
+        constructor_arguments.forEach(binding => {
+          sequenced[binding.index] = binding.binding
+        })
+        const dependencies = sequenced.map(dependency => {
+          return (dependency !== undefined)
+            ? local.resolve(dependency)
+            : undefined
+        })
+        return (dependencies.length > 0) 
+          ? (new ctor(...dependencies)) 
+          : (new ctor())
+      })
+    }
+  }
+
+  /**
+   * (decorator) constructor argument binding.
+   * @param {string} binding the component to bind.
+   * @returns {Function}
+   */
+  public bind (binding: string) {
+    return (ctor: any, n: any, index: number) => {
+      const dependencies = Reflect.getMetadata("ironcap::bindings", ctor)
+      const contructor_arguments = { binding, index }
+      if(dependencies === undefined) {
+        Reflect.defineMetadata("ironcap::bindings", [contructor_arguments], ctor)
+      } else {
+        dependencies.unshift(contructor_arguments)
+      }
+    }
   }
 }

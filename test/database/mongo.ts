@@ -6,7 +6,7 @@ export interface MongoDatabaseOptions {
   port: string
 }
 
-@ironcap.component()
+@ironcap.type()
 export class MongoDatabase implements IDatabase {
   constructor(@ironcap.bind("MongoDatabaseOptions") private options: MongoDatabaseOptions) {
     console.log("MongoDatabase Constructor")

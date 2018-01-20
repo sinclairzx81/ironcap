@@ -1,10 +1,10 @@
 /*--------------------------------------------------------------------------
 
-ironcap - A dependency injection library for TypeScript
+ironcap - An inversion of control library for TypeScript
 
 The MIT License (MIT)
 
-Copyright (c) 2017 Haydn Paterson (sinclair) <haydn.developer@gmail.com>
+Copyright (c) 2018 Haydn Paterson (sinclair) <haydn.developer@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,58 +27,25 @@ THE SOFTWARE.
 ---------------------------------------------------------------------------*/
 
 import { Scope } from "./scope"
-import "reflect-metadata"
 
 const root = new Scope({})
 
 /**
- * (decorator) registers a class as a component with named override.
- * @param {string} component the name of the type being defined
+ * (decorator) registers a class as a resolvable type.
+ * @param {string} typeName optional override for the typeName.
  * @returns {(ctor: any) => any}
  */
-export function component (component: string): (ctor: any) => any
-
-/**
- * (decorator) registers a class as a component.
- * @returns {(ctor: any) => any}
- */
-export function component (): (ctor: any) => any
-
-/**
- * (decorator) registers a class as a component.
- * @param {any[]} args the arguments
- * @returns {(ctor: any) => any}
- */
-export function component (...args: any[]) {
-  return (ctor: any) => {
-    const component = (args.length > 0) ? args[0] : ctor.name
-    const bindings  = (Reflect.getMetadata("ironcap:bindings", ctor) || []) as { binding: string, index: number }[]
-    const dependencies = []
-    bindings.forEach(binding => {
-      dependencies[binding.index] = binding.binding
-    })
-    root.define( component, dependencies, args => {
-      return (args.length > 0) 
-        ? (new ctor(...args)) 
-        : (new ctor())
-    })
-  }
+export function type(typeName?: string) {
+  return root.type (typeName)
 }
+
 /**
- * (decorator) constructor argument binding.
- * @param {string} binding the component to bind.
+ * (decorator) binds a constructor argument at resolution.
+ * @param {string} typeName the type to bind.
  * @returns {Function}
  */
-export function bind (binding: string) {
-  return (ctor: any, n: any, index: number) => {
-    const dependencies = Reflect.getMetadata("ironcap:bindings", ctor)
-    const element      = { binding, index }
-    if(dependencies === undefined) {
-      Reflect.defineMetadata("ironcap:bindings", [element], ctor)
-    } else {
-      dependencies.unshift(element)
-    }
-  }
+export function bind (typeName) {
+  return root.bind (typeName)
 }
 
 /**
@@ -92,12 +59,12 @@ export function scope<TEnvironment>(environment?: TEnvironment): Scope<TEnvironm
 
 /**
  * defines a component in the root scope.
- * @param {string} component the name of the component to define. 
- * @param {() => TType} factory the component factory function.
+ * @param {string} typeName the name of the component to define. 
+ * @param {(Scope<{}>, {}) => TType} factory the component factory function.
  * @returns {Scope<{}>}
  */
-export function define<TType>(component: string, dependencies: string[], factory: (...args: any[]) => TType): Scope<{}> {
-  return root.define(component, dependencies, factory)
+export function define<TType>(typeName: string, factory: (local: Scope<{}>, environment: {}) => TType): Scope<{}> {
+  return root.define(typeName, factory)
 }
 
 /**
