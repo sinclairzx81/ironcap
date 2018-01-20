@@ -56,6 +56,10 @@ const start = async () => {
   ])
 }
 
+const lint = async () => {
+  await shell("tslint ./src/ironcap.ts")
+}
+
 const build = async () => {
   await shell("npm install")
   await shell(`${TYPESCRIPT_SOURCE}`)
@@ -65,7 +69,8 @@ const build = async () => {
 //  cli:
 //------------------------------------------------------
 cli(process.argv, {
-  clean,
+  clean, 
+  lint,
   start,
   build
 }).catch(console.log)

@@ -1,2 +1,2 @@
-export {IDatabase}     from "./database"
-export {MongoDatabase} from "./mongo"
+export { IDatabase }     from "./database"
+export { MongoDatabase } from "./mongo"

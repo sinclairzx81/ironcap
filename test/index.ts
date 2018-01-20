@@ -1,19 +1,18 @@
 
-import * as ironcap     from "../src/ironcap"
-import * as controllers from "./controller/index"
-import * as database    from "./database/index"
+import ironcap from "ironcap"
 
-// late bound definitions
-ironcap.define("HomeControllerOptions",   () => ({message: "1"}))
-ironcap.define("AboutControllerOptions",  () => ({message: "2"}))
-ironcap.define("MongoDatabaseOptions",    () => ({message: "3"}))
+import ironcap from "ironcap"
 
-// interface binding
-ironcap.define("IDatabase", () => ironcap.scope().resolve("MongoDatabase"))
+@ironcap.type() export class Bar { }
+@ironcap.type() export class Baz { }
+@ironcap.type() export class Foo {
+  constructor(@ironcap.bind("Bar") private bar: Bar,
+              @ironcap.bind("Baz") private baz: Baz) {
+  }
+}
 
-// resolution
-const home  = ironcap.resolve("HomeController")
-const about = ironcap.resolve("AboutController")
+// explicit
+const foo_0 = new Foo(new Bar(), new Baz())
 
-console.log(home)
-console.log(about)
+// implicit
+const foo_1 = ironcap.resolve<Foo>("Foo")

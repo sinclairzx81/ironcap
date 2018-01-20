@@ -1,12 +1,12 @@
-import { type, bind, assert } from "../../src/ironcap"
+import ironcap from "ironcap"
 
 export interface AboutControllerOptions {
   name: string
 }
 
-@type()
+@ironcap.type()
 export class AboutController {
-  constructor(@bind("AboutControllerOptions") private options: AboutControllerOptions) {
+  constructor(@ironcap.bind("AboutControllerOptions") private options: AboutControllerOptions) {
     console.log("AboutController Constructor")
   }
 }

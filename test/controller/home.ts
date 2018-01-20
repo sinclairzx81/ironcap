@@ -1,14 +1,14 @@
-import { type, bind, assert } from "../../src/ironcap"
-import { IDatabase }               from "../database/index"
+import ironcap from "ironcap"
+import { IDatabase } from "../database/index"
 
 export interface HomeControllerOptions {
   name: string
 }
 
-@type()
+@ironcap.type()
 export class HomeController {
-  constructor(@bind("HomeControllerOptions") private options: HomeControllerOptions,
-              @bind("IDatabase") private database: any) {
+  constructor(@ironcap.bind("HomeControllerOptions") private options:  HomeControllerOptions,
+              @ironcap.bind("IDatabase")             private database: IDatabase) {
     console.log("HomeController Constructor")
   }
 }

@@ -1,18 +1,13 @@
 # ironcap
 
-An inversion of control library for TypeScript leveraging the ES7 decorators.
+An Inversion of Control library for TypeScript leveraging the ES7 decorators.
 
 ```typescript
-import * as ironcap from "<path-to>/ironcap"
+import ironcap from "ironcap"
 
-@ironcap.type() 
-export class Bar { }
-
-@ironcap.type() 
-export class Baz { }
-
-@ironcap.type()
-export class Foo {
+@ironcap.type() export class Bar { }
+@ironcap.type() export class Baz { }
+@ironcap.type() export class Foo {
   constructor(@ironcap.bind("Bar") private bar: Bar,
               @ironcap.bind("Baz") private baz: Baz) {
   }
@@ -22,12 +17,29 @@ export class Foo {
 const foo_0 = new Foo(new Bar(), new Baz())
 
 // implicit
-const foo_1 = ironcap.resolve("Foo")
+const foo_1 = ironcap.resolve<Foo>("Foo")
 ```
 
 ### overview
 
-ironcap is small inversion of control library TypeScript which leverages ES7 decorator syntax for registering types for instance resolution. ironcap allows one declaritively define which types can be resolved through decorators. 
+ironcap is an [Inversion of Control](https://en.wikipedia.org/wiki/Inversion_of_control) library for TypeScript leveraging ES7 decorator syntax for dependency injection.
+
+ironcap is provided as a standalone typescript source file which can be added to a typescript project to enable dependency injection services.
+
+### installation
+Preform the following to install ironcap into a local typescript project.
+
+```
+copy ./src/ironcap.ts into local project.
+
+npm i reflect-metadata
+
+tsconfig.json:
+
+    "experimentalDecorators": true
+
+    "emitDecoratorMetadata": true
+```
 
 ### registering types | resolving instances
 
@@ -40,10 +52,9 @@ The following registers a type via decorator.
 note: callers may override the automatic typename ```Foo``` with ```@ironcap.type("OtherName")```.
 
 ```typescript
-import * as ironcap from "..."
+import ironcap from "ironcap"
 
-@ironcap.type()
-class Foo {
+@ironcap.type() class Foo {
 
 }
 
@@ -57,10 +68,9 @@ The following registers a type via define.
 note: the ```define()``` function is primarily used to late register types dynamically.
 
 ```typescript
-import * as ironcap from "..."
+import ironcap from "ironcap"
 
-class Foo {
-}
+class Foo { }
 
 @ironcap.define("Foo", scope => new Foo())
 

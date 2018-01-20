@@ -9,9 +9,9 @@
     "lib": ["es6","dom"],
     "baseUrl": ".", 
     "paths": {
-      "@ironcap/*": ["../src/*"]
+      "ironcap": ["../src/ironcap"]
     }
   }, "files" : [
-    "index.ts"
+    "./index.ts"
   ]
 }

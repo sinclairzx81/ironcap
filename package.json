@@ -6,6 +6,7 @@
   "scripts": {
     "clean": "node tasks clean",
     "start": "node tasks start",
+    "lint": "node tasks lint",
     "build": "node tasks build"
   },
   "repository": {
@@ -19,6 +20,7 @@
     "@types/reflect-metadata": "0.0.5",
     "fsrun": "^0.9.4",
     "shx": "^0.2.2",
+    "tslint": "^5.9.1",
     "typescript": "^2.4.2",
     "typescript-bundle": "^0.8.6"
   },

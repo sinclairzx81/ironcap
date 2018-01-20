@@ -26,62 +26,156 @@ THE SOFTWARE.
 
 ---------------------------------------------------------------------------*/
 
-import { Scope } from "./scope"
+import "reflect-metadata"
 
-const root = new Scope({})
-
-/**
- * (decorator) registers a class as a resolvable type.
- * @param {string} typeName optional override for the typeName.
- * @returns {(ctor: any) => any}
- */
-export function type(typeName?: string) {
-  return root.type (typeName)
-}
+export type ScopeRegistration     = { typeName: string, factory: (local: Scope<any>, environment: any) => any, instance: any }
+export type ScopeAssertion<TType> = { typeName: string, func: (instance: TType) => void }
 
 /**
- * (decorator) binds a constructor argument at resolution.
- * @param {string} typeName the type to bind.
- * @returns {Function}
+ * Scope
+ *
+ * A resolution scope for types.
  */
-export function bind (typeName) {
-  return root.bind (typeName)
+export class Scope<TEnvironment> {
+
+  private registrations: ScopeRegistration[]        = []
+  private assertions:    Array<ScopeAssertion<any>> = []
+
+  /**
+   * creates a new Scope.
+   * @param {TEnvironment} environment the host environment for this Scope.
+   * @returns {Scope<TEnvironment>}
+   */
+  constructor(private environment: TEnvironment) { }
+
+  /**
+   * creates a new scope from this scope.
+   * @param {UEnvironment} environment the environment for this scope.
+   * @returns {Scope<UEnvironment>}
+   */
+  public scope<UEnvironment>(environment?: UEnvironment): Scope<UEnvironment> {
+    const scope = new Scope<UEnvironment>(Object.assign(this.environment, environment))
+    scope.assertions = this.assertions.map(assertion => ({
+       typeName: assertion.typeName,
+       func:     assertion.func
+    }))
+    scope.registrations = this.registrations.map(registration => ({
+      typeName:  registration.typeName,
+      factory:   registration.factory,
+      instance:  undefined
+    }))
+    return scope
+  }
+
+  /**
+   * registers a new type available on this scope.
+   * @param {string} typeName the name of the type being registered.
+   * @param {(Scope<TEnvironment>, TEnvironment) => TType} factory the type factory.
+   * @returns {Scope<TEnvironment>}
+   */
+  public  define<TType>(typeName: string, factory: (local: Scope<TEnvironment>, environment: TEnvironment) => TType): Scope<TEnvironment> {
+    const registration = this.registrations.find(registration  => registration.typeName === typeName)
+    if (registration !== undefined ) { throw Error(`Scope: component '${typeName}' already registered.`)}
+    this.registrations.push({ typeName, factory, instance: undefined })
+    return this
+  }
+
+  /**
+   * creates a type assertion for the given type name.
+   * @param {string} typeName the name of the type to assert.
+   * @param {(instance: TType) => void} func the instance assertion function.
+   * @returns {Scope<TEnvironment>}
+   */
+  public assert<TType>(typeName: string, func: (instance: TType) => void): Scope<TEnvironment> {
+    this.assertions.push({ typeName, func })
+    return this
+  }
+
+  /**
+   * resolves a type from this scope.
+   * @param {string} typeName the name of the type to resolve.
+   * @returns {TType}
+   */
+  public resolve<TType>(typeName: string): TType {
+    // load registration
+    const registration = this.registrations.find(registration => registration.typeName === typeName)
+    if (registration === undefined) {
+      throw Error(`component '${typeName}' does not exist`)
+    }
+
+    // if already resolved, return.
+    if (registration.instance !== undefined) {
+      return registration.instance
+    }
+
+    // resolve the instance.
+    const instance = registration.factory(this, this.environment)
+
+    // check for assertions on the instance.
+    const assertions = this.assertions.filter(assertion => assertion.typeName === registration.typeName)
+    assertions.forEach(assertion => {
+      try {
+        assertion.func(instance)
+      } catch (error) {
+        throw Error(`component '${assertion.typeName}' assertion ${error}`)
+      }
+    })
+
+    // assign instance
+    registration.instance = instance
+
+    // return
+    return registration.instance
+  }
+
+  // ------------------------------------------------
+  // decorators
+  // -------------------------------------------------
+
+  /**
+   * (decorator) registers a class as a resolvable type.
+   * @param {string} typeName (optional) override for the typeName.
+   * @returns {(ctor: any) => any}
+   */
+  public type (typeName?: string): (ctor: any) => void {
+    return (ctor: any) => {
+      this.define(typeName || ctor.name, local => {
+        const ctor_args = (Reflect.getMetadata("ironcap::bindings", ctor) || []) as Array<{
+          binding: string,
+          index:   number
+        }>
+        const sequenced = []
+        ctor_args.forEach(binding => {
+          sequenced[binding.index] = binding.binding
+        })
+        const dependencies = sequenced.map(dependency => {
+          return (dependency !== undefined)
+            ? local.resolve(dependency)
+            : undefined
+        })
+        return (dependencies.length > 0)
+          ? (new ctor(...dependencies))
+          : (new ctor())
+      })
+    }
+  }
+
+  /**
+   * (decorator) constructor argument binding.
+   * @param {string} binding the component to bind.
+   * @returns {(ctor: any, n: any, index: number) => void}
+   */
+  public bind (binding: string): (ctor: any, n: any, index: number) => void {
+    return (ctor: any, n: any, index: number) => {
+      const dependencies = Reflect.getMetadata("ironcap::bindings", ctor)
+      const contructor_arguments = { binding, index }
+      if (dependencies === undefined) {
+        Reflect.defineMetadata("ironcap::bindings", [contructor_arguments], ctor)
+      } else {
+        dependencies.unshift(contructor_arguments)
+      }
+    }
+  }
 }
 
-/**
- * creates a new scope.
- * @param {TEnvironment?} environment optional host environment for assertion and environment binding.
- * @returns {Array<ComponentDefinition>}
- */
-export function scope<TEnvironment>(environment?: TEnvironment): Scope<TEnvironment> {
-  return root.scope(environment)
-}
-
-/**
- * defines a component in the root scope.
- * @param {string} typeName the name of the component to define. 
- * @param {(Scope<{}>, {}) => TType} factory the component factory function.
- * @returns {Scope<{}>}
- */
-export function define<TType>(typeName: string, factory: (local: Scope<{}>, environment: {}) => TType): Scope<{}> {
-  return root.define(typeName, factory)
-}
-
-/**
- * resolves a component from the root scope.
- * @param {string} component the name of the component to resolve.
- * @returns {TType}
- */
-export function resolve<TType>(component: string): TType {
-  return root.resolve(component)
-}
-
-/**
- * creates a top level component assertion.
- * @param {string} component the name of the component to assert.
- * @param {ComponentAssertFunction<T>} assert the asset function.
- * @returns {void}
- */
-export function assert<TType>(component: string, assert: (instance: TType) => void) {
-  root.assert(component, assert)
-}
+export default new Scope({})

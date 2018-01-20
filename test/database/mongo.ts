@@ -1,4 +1,5 @@
-import * as ironcap from "../../src/ironcap"
+import ironcap from "ironcap"
+
 import {IDatabase} from "./database"
 
 export interface MongoDatabaseOptions {
